@@ -1,8 +1,30 @@
 import streamlit as st
 import pandas as pd
 
+st.markdown(
+    """
+    <style>
+    .main {
+        padding-top: 0px !important; /* 完全移除主頁面的頂部內距 */
+    }
+    header {
+        visibility: hidden; /* 隱藏 Streamlit 預設的頁面標題與資訊 */
+    }
+    .block-container {
+        padding-top: 0px !important; /* 再次減少內容區的頂部內距 */
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+
 # 設定標題
 st.title("🏡 錦州街都更補償計算器")
+st.markdown("""
+這個應用程式可以幫助您快速計算錦州街都更分房與找補金額。
+請輸入相關資訊，我們將根據原始計算邏輯為您提供結果。
+""")
 
 # **用戶輸入**
 saved_area = st.number_input("請輸入分到的房子坪數（坪）", min_value=0.0, value=89.09)
