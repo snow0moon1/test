@@ -1,146 +1,155 @@
 import streamlit as st
 import pandas as pd
 
+# 自訂 CSS 移除頂部空白
 st.markdown(
     """
     <style>
     .main {
-        padding-top: 0px !important; /* 完全移除主頁面的頂部內距 */
+        padding-top: 0px !important;
     }
     header {
-        visibility: hidden; /* 隱藏 Streamlit 預設的頁面標題與資訊 */
+        visibility: hidden;
     }
     .block-container {
-        padding-top: 0px !important; /* 再次減少內容區的頂部內距 */
+        padding-top: 0px !important;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: center;
+        margin-top: 20px;
+        font-family: Arial, sans-serif;
+    }
+    td, th {
+        border: 1px solid black;
+        padding: 10px;
+    }
+    .header {
+        background-color: #f2f2f2;
+        font-weight: bold;
+        font-size: 16px;
+    }
+    .spacer {
+        background-color: #e8e8e8;
+    }
+    .elevator {
+        background-color: #d9ead3;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-
-# 設定標題
+# 標題與介紹
 st.title("🏡 錦州街都更補償計算器")
 st.markdown("""
 這個應用程式可以幫助您快速計算錦州街都更分房與找補金額。
 請輸入相關資訊，我們將根據原始計算邏輯為您提供結果。
 """)
 
-# **用戶輸入**
-saved_area = st.number_input("請輸入分到的房子坪數（坪）", min_value=0.0, value=89.09)
-floor = st.slider("請選擇樓層", min_value=3, max_value=28, value=15)  # 樓層選擇
+# 使用者輸入權狀坪數
+saved_area = st.number_input("請輸入分到的土地權狀坪數（坪）", min_value=0.0, value=100.0)
+selected_floors = st.multiselect("請選擇樓層（可多選）", options=list(range(3, 29)), default=[26])
 car_space = st.selectbox("請選擇想要保留的車位數", [0, 1, 2])
-car_floor = st.selectbox("請選擇車位樓層", [1, 2, 3, 4, 5])
+car_floor = st.selectbox("請選擇車位樓層 (地下幾樓)", [1, 2, 3, 4, 5])
 
-# **根據樓層決定可選房號**
-house_ids = ["K", "L", "M", "N", "O", "P", "Q", "R"]
-floor_index = (28 - floor) * 8  # 計算對應的樓層索引
-available_houses = [f"{house}{floor}" for house in house_ids]
+# 動態生成房屋數據
+def generate_floor_data(floor):
+    base_floor = floor
+    HouseID = [f"P{base_floor}", f"O{base_floor}", f"N{base_floor}", f"M{base_floor}", f"L{base_floor}", f"K{base_floor}", f"Q{base_floor}", f"R{base_floor}"]
+    LandSize = [40.1, 19.1, 19.1, 19.1, 41.9, 23.1, 14.2, 15.1]
+    Compensate = [10.5] * len(HouseID)  # 每坪找補金額（假設）
+    return HouseID, LandSize, Compensate
 
-# **建立房屋數據**
-data = {
-    "房號": available_houses,
-    "權狀坪": [23.1, 41.9, 19.1, 19.1, 19.1, 40.1, 14.2, 15.1],
-    "專有坪": [15.2, 27.5, 12.6, 12.6, 12.6, 26.4, 9.3, 9.9],
-    "公設坪": [7.9, 14.4, 6.6, 6.6, 6.6, 13.8, 4.9, 5.2],
-    "找補金額/坪": [10.5, 13.5, 13.5, 13.5, 13.5, 13.5, 10.5, 10.5]
-}
+# 動態顯示房屋參考圖
+st.subheader(f"🏢 選擇的樓層房子及其權狀坪數")
+for floor in selected_floors:
+    HouseID, LandSize, _ = generate_floor_data(floor)
+    house_layout = f"""
+    <table>
+        <tr class="header">
+            <td>{HouseID[6]}</td>
+            <td>{HouseID[7]}</td>
+            <td class="elevator" rowspan="2">電梯<br>| X |</td>
+            <td class="elevator" rowspan="2">電梯<br>| X |</td>
+            <td>{HouseID[5]}</td>
+        </tr>
+        <tr>
+            <td>{LandSize[6]} 坪</td>
+            <td>{LandSize[7]} 坪</td>
+            <td>{LandSize[5]} 坪</td>
+        </tr>
+        <tr class="spacer">
+            <td colspan="5">走廊</td>
+        </tr>
+        <tr>
+            <td>{HouseID[0]}</td>
+            <td>{HouseID[1]}</td>
+            <td>{HouseID[2]}</td>
+            <td>{HouseID[3]}</td>
+            <td>{HouseID[4]}</td>
+        </tr>
+        <tr>
+            <td>{LandSize[0]} 坪</td>
+            <td>{LandSize[1]} 坪</td>
+            <td>{LandSize[2]} 坪</td>
+            <td>{LandSize[3]} 坪</td>
+            <td>{LandSize[4]} 坪</td>
+        </tr>
+    </table>
+    """
+    st.markdown(house_layout, unsafe_allow_html=True)
 
-df = pd.DataFrame(data)
+# 房屋選擇功能
+selected_houses = []
+for floor in selected_floors:
+    HouseID, _, _ = generate_floor_data(floor)
+    selected_houses += st.multiselect(f"請選擇 {floor} 樓的房號（可多選）", HouseID)
 
-# **顯示樓層結構**
-st.subheader("🏢 乙棟可選的房子及其權狀坪數")
-house_layout = f"""
-<style>
-    table {{
-        width: 100%;
-        border-collapse: collapse;
-        text-align: center;
-        margin-top: 20px;
-        font-family: Arial, sans-serif;
-    }}
-    td, th {{
-        border: 1px solid black;
-        padding: 10px;
-    }}
-    .header {{
-        background-color: #f2f2f2;
-        font-weight: bold;
-        font-size: 16px;
-    }}
-    .spacer {{
-        background-color: #e8e8e8;
-    }}
-</style>
+# 計算已選擇的房屋數據
+total_selected_area = 0
+total_compensate = 0
+selected_house_details = []
 
-<table>
-    <tr class="header">
-        <td colspan="5">乙棟可選的房子及其權狀坪數</td>
-    </tr>
-    <tr class="header">
-        <td colspan="5">選房時，可參考都更前 3 號三樓的情況</td>
-    </tr>
-    <tr class="header">
-        <td colspan="5">權狀 47.2 坪，室內 33.82 坪</td>
-    </tr>
-    <tr>
-        <td>{available_houses[6]}</td>
-        <td>{available_houses[7]}</td>
-        <td rowspan="2">電梯<br>| X |<br>{available_houses[0]}</td>
-        <td>{available_houses[1]}</td>
-        <td>{available_houses[2]}</td>
-    </tr>
-    <tr>
-        <td>14.2 坪</td>
-        <td>15.1 坪</td>
-        <td>41.9 坪</td>
-        <td>19.1 坪</td>
-    </tr>
-    <tr class="spacer">
-        <td colspan="5">走廊</td>
-    </tr>
-    <tr>
-        <td>{available_houses[5]}</td>
-        <td>{available_houses[4]}</td>
-        <td>{available_houses[3]}</td>
-        <td>{available_houses[2]}</td>
-        <td>{available_houses[1]}</td>
-    </tr>
-    <tr>
-        <td>40.1 坪</td>
-        <td>19.1 坪</td>
-        <td>19.1 坪</td>
-        <td>19.1 坪</td>
-        <td>41.9 坪</td>
-    </tr>
-</table>
-"""
-st.markdown(house_layout, unsafe_allow_html=True)
+for house in selected_houses:
+    for floor in selected_floors:
+        HouseID, LandSize, Compensate = generate_floor_data(floor)
+        if house in HouseID:
+            index = HouseID.index(house)
+            selected_house_details.append({
+                "樓層": floor,
+                "房號": house,
+                "權狀坪": LandSize[index],
+                "每坪找補 (萬)": Compensate[index],
+                "總找補金額 (萬)": LandSize[index] * Compensate[index]
+            })
+            total_selected_area += LandSize[index]
+            total_compensate += LandSize[index] * Compensate[index]
 
-# **選擇房號**
-selected_house = st.selectbox("請選擇房號", df["房號"])
+# 顯示已選擇的房屋詳細資訊
+st.subheader("🏢 已選擇的房屋資訊")
+if selected_house_details:
+    df_selected = pd.DataFrame(selected_house_details)
+    st.table(df_selected)
+else:
+    st.write("尚未選擇任何房屋。")
 
-# **計算選擇房子的找補**
-house_info = df[df["房號"] == selected_house]
-land_size = house_info["權狀坪"].values[0]
-compensate_per_pings = house_info["找補金額/坪"].values[0]
-total_compensate = land_size * compensate_per_pings
+# 計算剩餘坪數
+remaining_area = saved_area - total_selected_area
+if remaining_area >= 0:
+    st.success(f"剩餘可用土地權狀坪數：{remaining_area:.2f} 坪")
+else:
+    over_area = abs(remaining_area)
+    over_compensate = over_area * 120 * 0.9
+    st.error(f"⚠️ 超出權狀坪數：{over_area:.2f} 坪，需補償金額：約 {over_compensate:.2f} 萬")
 
-# **計算車位補償**
-car_compensate = [80, 60, 40, 20, 0]
-car_adjustment = car_compensate[car_floor - 1] * car_space - 240 * 0.9 * (saved_area / 55 - car_space)
-
-# **顯示計算結果**
-st.subheader("🏠 計算結果")
-st.write(f"🏢 **選擇的樓層**: {floor} 樓")
+# 顯示總結果
+st.subheader("💰 計算結果")
 st.write(f"🔹 **土地權狀坪數**: {saved_area:.2f} 坪")
-st.write(f"🔹 **可分得車位**: {saved_area / 55:.2f} 個")
-st.write(f"🚗 **選擇的車位樓層**: 地下 {car_floor} 樓，共 {car_space} 個")
-st.write(f"🔹 **選擇的房號**: {selected_house}")
-st.write(f"🏡 **權狀坪數**: {land_size:.2f} 坪")
-st.write(f"💰 **每坪找補金額**: {compensate_per_pings:.2f} 萬")
-st.write(f"💰 **此房總找補金額**: {total_compensate:.2f} 萬")
-st.write(f"🚗 **車位補償金額調整**: {car_adjustment:.2f} 萬")
-
-final_compensate = total_compensate + car_adjustment
-st.success(f"💰 **最終找補金額**: {final_compensate:.2f} 萬")
+st.write(f"🔹 **已選擇的總坪數**: {total_selected_area:.2f} 坪")
+st.write(f"🔹 **剩餘坪數**: {remaining_area:.2f} 坪")
+if remaining_area < 0:
+    st.write(f"🔹 **需補償金額**: 約 {over_compensate:.2f} 萬")
+else:
+    st.write(f"🔹 **總找補金額**: {total_compensate:.2f} 萬")
